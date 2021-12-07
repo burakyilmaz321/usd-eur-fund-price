@@ -1,0 +1,3 @@
+Flask==2.0.2
+requests==2.26.0
+tefas-crawler==0.3.3
