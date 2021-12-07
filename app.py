@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import requests
 from flask import Flask, request
@@ -14,18 +14,25 @@ currency_url = "http://api.exchangeratesapi.io/v1/"
 currency_access_key = ""
 
 
+@app.route("/")
+def readme():
+    with open("README.md", "r") as fstream:
+        readme = fstream.read()
+    return readme
+
+
 @app.route("/usd")
 def usd():
-    today = datetime.today().date().isoformat()
-    res = requests.get(f"{currency_url}/{today}?access_key={currency_access_key}&symbols=TRY,USD")
+    date = request.args.get("date") or datetime.today().date().isoformat()
+    res = requests.get(f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY,USD")
     data = res.json()
     return str(data["rates"]["TRY"] / data["rates"]["USD"])
 
 
 @app.route("/eur")
 def eur():
-    today = datetime.today().date().isoformat()
-    res = requests.get(f"{currency_url}/{today}?access_key={currency_access_key}&symbols=TRY")
+    date = request.args.get("date") or datetime.today().date().isoformat()
+    res = requests.get(f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY")
     data = res.json()
     return str(data["rates"]["TRY"])
 
@@ -33,9 +40,9 @@ def eur():
 @app.route("/fon")
 def fund():
     fund_code = request.args.get("q")
+    date = request.args.get("date") or datetime.today().date().isoformat()
     client = Crawler()
-    today = datetime.today().date().isoformat()
-    data = client.fetch(start=today, name=fund_code, columns=["price"])
+    data = client.fetch(start=date, name=fund_code, columns=["price"])
     return str(data.price[0])
 
 
