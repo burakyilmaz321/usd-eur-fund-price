@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 
 import requests
-from flask import Flask, request
+from flask import Flask, request, make_response
 from tefas import Crawler
 
 
@@ -26,7 +26,9 @@ def usd():
     date = request.args.get("date") or datetime.today().date().isoformat()
     res = requests.get(f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY,USD")
     data = res.json()
-    return str(data["rates"]["TRY"] / data["rates"]["USD"])
+    resp = make_response(str(data["rates"]["TRY"] / data["rates"]["USD"]))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
 
 
 @app.route("/eur")
@@ -34,7 +36,9 @@ def eur():
     date = request.args.get("date") or datetime.today().date().isoformat()
     res = requests.get(f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY")
     data = res.json()
-    return str(data["rates"]["TRY"])
+    resp = make_response(str(data["rates"]["TRY"]))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
 
 
 @app.route("/fon")
@@ -43,7 +47,10 @@ def fund():
     date = request.args.get("date") or datetime.today().date().isoformat()
     client = Crawler()
     data = client.fetch(start=date, name=fund_code, columns=["price"])
-    return str(data.price[0])
+    resp = make_response(str(data.price[0]))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
 
 
 if __name__ == "__main__":
