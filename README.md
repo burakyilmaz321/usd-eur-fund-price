@@ -19,6 +19,9 @@ ENDPOINTS
      is the code of the desired fund. Returns the latest price if
      `date` parameter is not given.
 
+   o `/all[?date=YYYY-MM-DD]`: All TEFAS fund price. Returns the
+     latest prices if `date` parameter is not given.
+
 USAGE
    o Get latest USD/TRY rate:
       `/usd`
@@ -40,4 +43,10 @@ USAGE
 
    o Use it with Google Sheets function IMPORTDATA:
       =IMPORTDATA("/fon?q=TCD")
+
+   o Get all fund prices for today:
+      `/all`
+
+   o Get all fund prices at December 7th, 2021:
+      `/all?date=2021-12-07`
 </pre>

@@ -52,6 +52,16 @@ def fund():
     return resp
 
 
+@app.route("/all")
+def all_funds():
+    date = request.args.get("date") or datetime.today().date().isoformat()
+    client = Crawler()
+    data = client.fetch(start=date, columns=["code", "title", "price"])
+    resp = make_response(data.to_csv(index=False))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Content-Type"] = "text/csv"
+    return resp
+
 
 if __name__ == "__main__":
     server_port = os.environ.get("PORT", "8080")
