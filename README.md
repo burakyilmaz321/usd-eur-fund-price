@@ -22,6 +22,9 @@ ENDPOINTS
    o `/all[?date=YYYY-MM-DD]`: All TEFAS fund price. Returns the
      latest prices if `date` parameter is not given.
 
+   o `/multi?q=CODE[&q=CODE ...][&date=YYYY-MM-DD ...]`: Multiple
+     TEFAS funds for multiple dates.
+
 USAGE
    o Get latest USD/TRY rate:
       `/usd`
@@ -49,4 +52,7 @@ USAGE
 
    o Get all fund prices at December 7th, 2021:
       `/all?date=2021-12-07`
+
+   o Get multiple funds for multiple dates:
+      `/multi?q=YAC&q=TCD&date=2021-12-07&date=2021-12-08`
 </pre>

@@ -63,6 +63,22 @@ def all_funds():
     return resp
 
 
+@app.route("/multi")
+def multi():
+    fund_code = request.args.getlist("q")
+    date = request.args.getlist("date") or [datetime.today().date().isoformat()]
+    client = Crawler()
+    data = client.fetch(start=min(date), end=max(date), columns=["code", "date", "price"])
+    data = data[
+        data["code"].isin(fund_code) &
+        data["date"].isin(map(lambda d: datetime.strptime(d, "%Y-%m-%d").date(), date))
+    ]
+    resp = make_response(data.to_csv(index=False))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Content-Type"] = "text/csv"
+    return resp
+
+
 if __name__ == "__main__":
     server_port = os.environ.get("PORT", "8080")
     app.run(debug=False, port=server_port, host="0.0.0.0")
