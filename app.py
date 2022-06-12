@@ -124,8 +124,8 @@ def returns():
     fund_returns_df = fund_returns_df.merge(fund_sizes_df, on=["FONKODU"])
     fund_returns_df = fund_returns_df.rename(columns={
         "FONKODU": "kod",
-        "FONUNVAN": "tip",
-        "FONTURACIKLAMA": "isim",
+        "FONUNVAN": "isim",
+        "FONTURACIKLAMA": "tip",
         "GETIRI1A": "getiri_1a",
         "GETIRI3A": "getiri_3a",
         "GETIRI6A": "getiri_6a",
@@ -141,6 +141,19 @@ def returns():
     fund_returns_df["getiri_yb"] = fund_returns_df["getiri_yb"] / 100
     fund_returns_df["getiri_3y"] = fund_returns_df["getiri_3y"] / 100
     fund_returns_df["getiri_5y"] = fund_returns_df["getiri_5y"] / 100
+    fund_returns_df = fund_returns_df[[
+        "kod",
+        "isim",
+        "tip",
+        "unvan_tipi",
+        "getiri_1a",
+        "getiri_3a",
+        "getiri_6a",
+        "getiri_1y",
+        "getiri_yb",
+        "getiri_3y",
+        "getiri_5y",
+    ]]
     resp = make_response(fund_returns_df.to_csv(index=False))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Content-Type"] = "text/csv"
