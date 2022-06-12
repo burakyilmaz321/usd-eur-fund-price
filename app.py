@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 
 currency_url = "http://api.exchangeratesapi.io/v1/"
-currency_access_key = ""
+currency_access_key = os.getenv("API_KEY")
 
 
 @app.route("/")
