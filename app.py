@@ -134,6 +134,13 @@ def returns():
         "GETIRI3Y": "getiri_3y",
         "GETIRI5Y": "getiri_5y",
     })
+    fund_returns_df["getiri_1a"] = fund_returns_df["getiri_1a"] / 100
+    fund_returns_df["getiri_3a"] = fund_returns_df["getiri_3a"] / 100
+    fund_returns_df["getiri_6a"] = fund_returns_df["getiri_6a"] / 100
+    fund_returns_df["getiri_1y"] = fund_returns_df["getiri_1y"] / 100
+    fund_returns_df["getiri_yb"] = fund_returns_df["getiri_yb"] / 100
+    fund_returns_df["getiri_3y"] = fund_returns_df["getiri_3y"] / 100
+    fund_returns_df["getiri_5y"] = fund_returns_df["getiri_5y"] / 100
     resp = make_response(fund_returns_df.to_csv(index=False))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Content-Type"] = "text/csv"
