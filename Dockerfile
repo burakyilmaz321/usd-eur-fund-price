@@ -1,17 +1,26 @@
-# Python image to use.
-FROM python:3.8
+# Use the official lightweight Python image.
+# https://hub.docker.com/_/python
+FROM python:3.10-slim
+
+# Allow statements and log messages to immediately appear in the Knative logs
+ENV PYTHONUNBUFFERED True
+
+# Install stable pipenv for the current system
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  pipenv \
+  && apt-get autoremove -yqq --purge \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory to /app
 WORKDIR /app
 
-# copy the requirements file used for dependencies
-COPY requirements.txt .
-
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir --trusted-host pypi.python.org -r requirements.txt
-
-# Copy the rest of the working directory contents into the container at /app
+# Copy the working directory contents into the container at /app
 COPY . .
 
+# Install locked dependencies
+RUN pipenv install --system --deploy
+
 # Run app.py when the container launches
-ENTRYPOINT ["python", "app.py"]
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
