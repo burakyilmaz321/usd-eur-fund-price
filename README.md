@@ -25,6 +25,8 @@ ENDPOINTS
    o `/multi?q=CODE[&q=CODE ...][&date=YYYY-MM-DD ...]`: Multiple
      TEFAS funds for multiple dates.
 
+   o `/returns`: Get fund returns for different time periods.
+
 USAGE
    o Get latest USD/TRY rate:
       `/usd`

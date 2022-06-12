@@ -1,6 +1,7 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import pandas as pd
 import requests
 from flask import Flask, request, make_response
 from tefas import Crawler
@@ -70,10 +71,70 @@ def multi():
     client = Crawler()
     data = client.fetch(start=min(date), end=max(date), columns=["code", "date", "price"])
     data = data[
-        data["code"].isin(fund_code) &
-        data["date"].isin(map(lambda d: datetime.strptime(d, "%Y-%m-%d").date(), date))
+        data["code"].isin(fund_code)
+        & data["date"].isin(map(lambda d: datetime.strptime(d, "%Y-%m-%d").date(), date))
     ]
     resp = make_response(data.to_csv(index=False))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Content-Type"] = "text/csv"
+    return resp
+
+
+@app.route("/returns")
+def returns():
+    headers = {
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Connection": "keep-alive",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Origin": "https://www.tefas.gov.tr",
+        "Referer": "https://www.tefas.gov.tr/FonKarsilastirma.aspx",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+
+    data = {
+        "calismatipi": "2",
+        "fontip": "YAT",
+        "sfontur": "",
+        "kurucukod": "",
+        "fongrup": "",
+        "bastarih": (datetime.today() - timedelta(days=30)).date().strftime("%d.%m.%Y"),
+        "bittarih": datetime.today().date().strftime("%d.%m.%Y"),
+        "fonturkod": "",
+        "fonunvantip": "",
+        "strperiod": "1,1,1,1,1,1,1",
+        "islemdurum": "",
+    }
+    response = requests.post(
+        "https://www.tefas.gov.tr/api/DB/BindComparisonFundReturns", headers=headers, data=data
+    )
+    fund_returns_response = response.json()["data"]
+    response = requests.post(
+        "https://www.tefas.gov.tr/api/DB/BindComparisonFundSizes", headers=headers, data=data
+    )
+    fund_sizes_response = response.json()["data"]
+    fund_returns_df = pd.DataFrame(fund_returns_response)
+    fund_sizes_df = pd.DataFrame(fund_sizes_response)
+    fund_sizes_df = fund_sizes_df[["FONKODU", "FONTURACIKLAMA"]]
+    fund_sizes_df = fund_sizes_df.rename(columns={"FONTURACIKLAMA": "unvan_tipi"})
+    fund_returns_df = fund_returns_df.merge(fund_sizes_df, on=["FONKODU"])
+    fund_returns_df = fund_returns_df.rename(columns={
+        "FONKODU": "kod",
+        "FONUNVAN": "tip",
+        "FONTURACIKLAMA": "isim",
+        "GETIRI1A": "getiri_1a",
+        "GETIRI3A": "getiri_3a",
+        "GETIRI6A": "getiri_6a",
+        "GETIRI1Y": "getiri_1y",
+        "GETIRIYB": "getiri_yb",
+        "GETIRI3Y": "getiri_3y",
+        "GETIRI5Y": "getiri_5y",
+    })
+    resp = make_response(fund_returns_df.to_csv(index=False))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Content-Type"] = "text/csv"
     return resp
