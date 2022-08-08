@@ -47,7 +47,18 @@ def fund():
     fund_code = request.args.get("q")
     date = request.args.get("date") or datetime.today().date().isoformat()
     client = Crawler()
-    data = client.fetch(start=date, name=fund_code, columns=["price"])
+    # try fetch until there's data for given day, bail out when max_attempt is reached
+    max_attempt, attempt_count, is_empty = 5, 0, True
+    while is_empty:
+        if max_attempt == attempt_count:
+            break
+        fetch_date = (
+            datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count)
+        ).date().isoformat()
+        print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
+        data = client.fetch(start=fetch_date, name=fund_code, columns=["price"])
+        is_empty = data.empty
+        attempt_count += 1
     resp = make_response(str(data.price[0]))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
