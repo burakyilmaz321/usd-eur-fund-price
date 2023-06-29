@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 import pandas as pd
+import redis
 import requests
 from flask import Flask, request, make_response
 from tefas import Crawler
@@ -11,8 +12,58 @@ from tefas import Crawler
 app = Flask(__name__)
 
 
+# Load dotenv
+try:
+    with open(".env", "r") as fstream:
+        lines = fstream.read().split()
+    os.environ.update({line.split("=")[0]: line.split("=")[1] for line in lines})
+except FileNotFoundError:
+    print("Cannot find .env file. Skipping...")
+
+
 currency_url = "http://api.exchangeratesapi.io/v1/"
 currency_access_key = os.getenv("API_KEY")
+upstash_key = os.getenv("UPSTASH_KEY")
+upstash_host = os.getenv("UPSTASH_HOST")
+upstash_port = os.getenv("UPSTASH_PORT")
+
+
+def get_cached_price(crawler_client, fund_code, date):
+    """Get price from KV first, if does not exist, get from Tefas"""
+
+    # Set up Redis connection
+    r = redis.Redis(
+        host=upstash_host,
+        port=upstash_port,
+        password=upstash_key
+    )
+
+    # create a unique key for this fund_code and date combination
+    key = f"{fund_code}_{date}"
+
+    # check if price exists in cache
+    price = r.get(key)
+
+    if price is not None:
+        print("Returning from cache")
+        # check if price is the placeholder for None
+        if price.decode('utf-8') == 'None':
+            return None
+        else:
+            # convert bytes to float
+            return float(price)
+
+    # if price is not in cache, fetch from Tefas
+    data = crawler_client.fetch(start=date, name=fund_code, columns=["price"])
+
+    if data.empty:
+        # cache a placeholder for None in Redis
+        r.set(key, 'None')
+        return None
+    else:
+        # cache the price in Redis for future use
+        r.set(key, data.price[0])
+        return data.price[0]
 
 
 @app.route("/")
@@ -45,6 +96,9 @@ def eur():
 @app.route("/fon")
 def fund():
     fund_code = request.args.get("q")
+    if not fund_code:
+        return "Fund code parameter is required.", 400
+
     date = request.args.get("date") or datetime.today().date().isoformat()
     client = Crawler()
     # try fetch until there's data for given day, bail out when max_attempt is reached
@@ -56,10 +110,10 @@ def fund():
             datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count)
         ).date().isoformat()
         print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
-        data = client.fetch(start=fetch_date, name=fund_code, columns=["price"])
-        is_empty = data.empty
+        price = get_cached_price(client, fund_code, fetch_date)
+        is_empty = price is None
         attempt_count += 1
-    resp = make_response(str(data.price[0]))
+    resp = make_response(str(price))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
 
@@ -198,10 +252,10 @@ def value():
                 datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count)
             ).date().isoformat()
             print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
-            data = client.fetch(start=fetch_date, name=fund_code, columns=["price"])
-            is_empty = data.empty
+            price = get_cached_price(client, fund_code, fetch_date)
+            is_empty = price is None
             attempt_count += 1
-        total_value += data.price[0] * share
+        total_value += price * share
     resp = make_response(str(total_value))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
