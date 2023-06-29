@@ -171,6 +171,42 @@ def returns():
     return resp
 
 
+@app.route("/value")
+def value():
+    fund_codes = request.args.get("fund")
+    shares = request.args.get("shares")
+    date = request.args.get("date") or datetime.today().date().isoformat()
+
+    if not fund_codes or not shares:
+        return "Fund codes and shares parameters are required.", 400
+
+    fund_codes = fund_codes.split(',')
+    shares = list(map(int, shares.split(',')))
+
+    if len(fund_codes) != len(shares):
+        return "Fund codes and shares list lengths do not match.", 400
+
+    client = Crawler()
+    total_value = 0
+    for fund_code, share in zip(fund_codes, shares):
+        # try fetch until there's data for given day, bail out when max_attempt is reached
+        max_attempt, attempt_count, is_empty = 5, 0, True
+        while is_empty:
+            if max_attempt == attempt_count:
+                break
+            fetch_date = (
+                datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count)
+            ).date().isoformat()
+            print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
+            data = client.fetch(start=fetch_date, name=fund_code, columns=["price"])
+            is_empty = data.empty
+            attempt_count += 1
+        total_value += data.price[0] * share
+    resp = make_response(str(total_value))
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+
 if __name__ == "__main__":
     server_port = os.environ.get("PORT", "8080")
     app.run(debug=False, port=server_port, host="0.0.0.0")
