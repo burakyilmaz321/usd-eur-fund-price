@@ -132,6 +132,7 @@ def all_funds():
 @app.route("/multi")
 def multi():
     fund_code = request.args.getlist("q")
+    decimal = request.args.get("dec")
     date = request.args.getlist("date") or [datetime.today().date().isoformat()]
     client = Crawler()
     data = client.fetch(start=min(date), end=max(date), columns=["code", "date", "price"])
@@ -139,7 +140,7 @@ def multi():
         data["code"].isin(fund_code)
         & data["date"].isin(map(lambda d: datetime.strptime(d, "%Y-%m-%d").date(), date))
     ]
-    resp = make_response(data.to_csv(index=False))
+    resp = make_response(data.to_csv(index=False, decimal=decimal if decimal else "."))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Content-Type"] = "text/csv"
     return resp
