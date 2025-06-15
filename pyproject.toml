@@ -1,0 +1,7 @@
+[project]
+name = "usd-eur-fund-price"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10.8"
+dependencies = ["flask", "requests", "tefas-crawler", "gunicorn", "redis[hiredis]"]
