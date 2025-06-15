@@ -45,7 +45,7 @@ def get_cached_price(crawler_client, fund_code, date):
             return None
         else:
             # convert bytes to float
-            return float(price)
+            return float(price.decode("utf-8"))
 
     # if price is not in cache, fetch from Tefas
     data = crawler_client.fetch(start=date, name=fund_code, columns=["price"])
@@ -56,8 +56,9 @@ def get_cached_price(crawler_client, fund_code, date):
         return None
     else:
         # cache the price in Redis for future use
-        r.set(key, data.price[0])
-        return data.price[0]
+        price_data = float(data.price[0])
+        r.set(key, price_data)
+        return price_data
 
 
 @app.route("/")
