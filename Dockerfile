@@ -13,7 +13,7 @@ WORKDIR /app
 COPY . .
 
 # Install locked dependencies
-RUN uv sync
+RUN uv sync --locked
 
 # Run app.py when the container launches
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+CMD exec uv run gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
