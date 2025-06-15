@@ -23,20 +23,14 @@ except FileNotFoundError:
 
 currency_url = "http://api.exchangeratesapi.io/v1/"
 currency_access_key = os.getenv("API_KEY")
-upstash_key = os.getenv("UPSTASH_KEY")
-upstash_host = os.getenv("UPSTASH_HOST")
-upstash_port = os.getenv("UPSTASH_PORT")
+upstash_redis_url = os.getenv("UPSTASH_REDIS_URL")
 
 
 def get_cached_price(crawler_client, fund_code, date):
     """Get price from KV first, if does not exist, get from Tefas"""
 
     # Set up Redis connection
-    r = redis.Redis(
-        host=upstash_host,
-        port=upstash_port,
-        password=upstash_key
-    )
+    r = redis.Redis.from_url(upstash_redis_url)
 
     # create a unique key for this fund_code and date combination
     key = f"{fund_code}_{date}"
@@ -47,7 +41,7 @@ def get_cached_price(crawler_client, fund_code, date):
     if price is not None:
         print("Returning from cache")
         # check if price is the placeholder for None
-        if price.decode('utf-8') == 'None':
+        if price.decode("utf-8") == "None":
             return None
         else:
             # convert bytes to float
@@ -58,7 +52,7 @@ def get_cached_price(crawler_client, fund_code, date):
 
     if data.empty:
         # cache a placeholder for None in Redis
-        r.set(key, 'None')
+        r.set(key, "None")
         return None
     else:
         # cache the price in Redis for future use
@@ -76,7 +70,9 @@ def readme():
 @app.route("/usd")
 def usd():
     date = request.args.get("date") or datetime.today().date().isoformat()
-    res = requests.get(f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY,USD")
+    res = requests.get(
+        f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY,USD"
+    )
     data = res.json()
     resp = make_response(str(data["rates"]["TRY"] / data["rates"]["USD"]))
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -86,7 +82,9 @@ def usd():
 @app.route("/eur")
 def eur():
     date = request.args.get("date") or datetime.today().date().isoformat()
-    res = requests.get(f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY")
+    res = requests.get(
+        f"{currency_url}/{date}?access_key={currency_access_key}&symbols=TRY"
+    )
     data = res.json()
     resp = make_response(str(data["rates"]["TRY"]))
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -107,8 +105,10 @@ def fund():
         if max_attempt == attempt_count:
             break
         fetch_date = (
-            datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count)
-        ).date().isoformat()
+            (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count))
+            .date()
+            .isoformat()
+        )
         print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
         price = get_cached_price(client, fund_code, fetch_date)
         is_empty = price is None
@@ -135,10 +135,14 @@ def multi():
     decimal = request.args.get("dec")
     date = request.args.getlist("date") or [datetime.today().date().isoformat()]
     client = Crawler()
-    data = client.fetch(start=min(date), end=max(date), columns=["code", "date", "price"])
+    data = client.fetch(
+        start=min(date), end=max(date), columns=["code", "date", "price"]
+    )
     data = data[
         data["code"].isin(fund_code)
-        & data["date"].isin(map(lambda d: datetime.strptime(d, "%Y-%m-%d").date(), date))
+        & data["date"].isin(
+            map(lambda d: datetime.strptime(d, "%Y-%m-%d").date(), date)
+        )
     ]
     resp = make_response(data.to_csv(index=False, decimal=decimal if decimal else "."))
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -176,11 +180,15 @@ def returns():
         "islemdurum": "",
     }
     response = requests.post(
-        "https://www.tefas.gov.tr/api/DB/BindComparisonFundReturns", headers=headers, data=data
+        "https://www.tefas.gov.tr/api/DB/BindComparisonFundReturns",
+        headers=headers,
+        data=data,
     )
     fund_returns_response = response.json()["data"]
     response = requests.post(
-        "https://www.tefas.gov.tr/api/DB/BindComparisonFundSizes", headers=headers, data=data
+        "https://www.tefas.gov.tr/api/DB/BindComparisonFundSizes",
+        headers=headers,
+        data=data,
     )
     fund_sizes_response = response.json()["data"]
     fund_returns_df = pd.DataFrame(fund_returns_response)
@@ -188,18 +196,20 @@ def returns():
     fund_sizes_df = fund_sizes_df[["FONKODU", "FONTURACIKLAMA"]]
     fund_sizes_df = fund_sizes_df.rename(columns={"FONTURACIKLAMA": "unvan_tipi"})
     fund_returns_df = fund_returns_df.merge(fund_sizes_df, on=["FONKODU"])
-    fund_returns_df = fund_returns_df.rename(columns={
-        "FONKODU": "kod",
-        "FONUNVAN": "isim",
-        "FONTURACIKLAMA": "tip",
-        "GETIRI1A": "getiri_1a",
-        "GETIRI3A": "getiri_3a",
-        "GETIRI6A": "getiri_6a",
-        "GETIRI1Y": "getiri_1y",
-        "GETIRIYB": "getiri_yb",
-        "GETIRI3Y": "getiri_3y",
-        "GETIRI5Y": "getiri_5y",
-    })
+    fund_returns_df = fund_returns_df.rename(
+        columns={
+            "FONKODU": "kod",
+            "FONUNVAN": "isim",
+            "FONTURACIKLAMA": "tip",
+            "GETIRI1A": "getiri_1a",
+            "GETIRI3A": "getiri_3a",
+            "GETIRI6A": "getiri_6a",
+            "GETIRI1Y": "getiri_1y",
+            "GETIRIYB": "getiri_yb",
+            "GETIRI3Y": "getiri_3y",
+            "GETIRI5Y": "getiri_5y",
+        }
+    )
     fund_returns_df["getiri_1a"] = fund_returns_df["getiri_1a"] / 100
     fund_returns_df["getiri_3a"] = fund_returns_df["getiri_3a"] / 100
     fund_returns_df["getiri_6a"] = fund_returns_df["getiri_6a"] / 100
@@ -207,19 +217,21 @@ def returns():
     fund_returns_df["getiri_yb"] = fund_returns_df["getiri_yb"] / 100
     fund_returns_df["getiri_3y"] = fund_returns_df["getiri_3y"] / 100
     fund_returns_df["getiri_5y"] = fund_returns_df["getiri_5y"] / 100
-    fund_returns_df = fund_returns_df[[
-        "kod",
-        "isim",
-        "tip",
-        "unvan_tipi",
-        "getiri_1a",
-        "getiri_3a",
-        "getiri_6a",
-        "getiri_1y",
-        "getiri_yb",
-        "getiri_3y",
-        "getiri_5y",
-    ]]
+    fund_returns_df = fund_returns_df[
+        [
+            "kod",
+            "isim",
+            "tip",
+            "unvan_tipi",
+            "getiri_1a",
+            "getiri_3a",
+            "getiri_6a",
+            "getiri_1y",
+            "getiri_yb",
+            "getiri_3y",
+            "getiri_5y",
+        ]
+    ]
     resp = make_response(fund_returns_df.to_csv(index=False))
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Content-Type"] = "text/csv"
@@ -235,8 +247,8 @@ def value():
     if not fund_codes or not shares:
         return "Fund codes and shares parameters are required.", 400
 
-    fund_codes = fund_codes.split(',')
-    shares = list(map(int, shares.split(',')))
+    fund_codes = fund_codes.split(",")
+    shares = list(map(int, shares.split(",")))
 
     if len(fund_codes) != len(shares):
         return "Fund codes and shares list lengths do not match.", 400
@@ -250,8 +262,10 @@ def value():
             if max_attempt == attempt_count:
                 break
             fetch_date = (
-                datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count)
-            ).date().isoformat()
+                (datetime.strptime(date, "%Y-%m-%d") - timedelta(days=attempt_count))
+                .date()
+                .isoformat()
+            )
             print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
             price = get_cached_price(client, fund_code, fetch_date)
             is_empty = price is None
