@@ -61,6 +61,19 @@ def get_cached_price(crawler_client, fund_code, date):
         return price_data
 
 
+def get_price(crawler_client, fund_code, date):
+    """Get price from Tefas"""
+
+    # fetch from Tefas
+    data = crawler_client.fetch(start=date, name=fund_code, columns=["price"])
+
+    if data.empty:
+        return None
+    else:
+        price_data = float(data.price[0])
+        return price_data
+
+
 @app.route("/")
 def readme():
     with open("README.md", "r") as fstream:
@@ -111,7 +124,7 @@ def fund():
             .isoformat()
         )
         print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
-        price = get_cached_price(client, fund_code, fetch_date)
+        price = get_price(client, fund_code, fetch_date)
         is_empty = price is None
         attempt_count += 1
     resp = make_response(str(price))
@@ -268,7 +281,7 @@ def value():
                 .isoformat()
             )
             print(f"Try fetch for fund: {fund_code}, date: {fetch_date}")
-            price = get_cached_price(client, fund_code, fetch_date)
+            price = get_price(client, fund_code, fetch_date)
             is_empty = price is None
             attempt_count += 1
         total_value += price * share
