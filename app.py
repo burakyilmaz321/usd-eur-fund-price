@@ -110,7 +110,7 @@ def fund():
     fund_code = request.args.get("q")
     if not fund_code:
         return "Fund code parameter is required.", 400
-
+    decimal = request.args.get("dec")
     date = request.args.get("date") or datetime.today().date().isoformat()
     client = Crawler()
     # try fetch until there's data for given day, bail out when max_attempt is reached
@@ -127,7 +127,10 @@ def fund():
         price = get_price(client, fund_code, fetch_date)
         is_empty = price is None
         attempt_count += 1
-    resp = make_response(str(price))
+    str_price = str(price)
+    if decimal:
+        str_price = str_price.replace(".", decimal)
+    resp = make_response(str_price)
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
 
